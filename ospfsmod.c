@@ -1,7 +1,7 @@
 #include <linux/autoconf.h>
 #include <linux/version.h>
 #ifndef EXPORT_SYMTAB
-# define EXPORT_SYMTAB
+#define EXPORT_SYMTAB
 #endif
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -443,6 +443,9 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 			f_pos++;
 	}
 
+	int ftype;
+	uint32_t offset = 0;
+
 	// actual entries
 	while (r == 0 && ok_so_far >= 0 && f_pos >= 2) {
 		ospfs_direntry_t *od;
@@ -452,12 +455,11 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		 * the loop.  For now we do this all the time.
 		 *
 		 * EXERCISE: Your code here */
-    uint32_t file_size = dir_oi->oi_size * OSPFS_DIRENTRY_SIZE;
-    if ( (f_pos-2) >= file_size)
-    {
-		  r = 1;		/* Fix me! */
-		  break;		/* Fix me! */
-    }
+		offset = OSPFS_DIRENTRY_SIZE * (f_pos-2);
+		if (offset >= dir_oi->oi_size) {		
+			r = 1;
+			break;
+		}
 
 		/* Get a pointer to the next entry (od) in the directory.
 		 * The file system interprets the contents of a
@@ -478,8 +480,32 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		 * your function should advance f_pos by the proper amount to
 		 * advance to the next directory entry.
 		 */
+		
+		od = ospfs_inode_data(dir_oi, offset);
+		entry_oi = ospfs_inode(od->od_ino);
+		if (entry_oi == NULL || od->od_ino == 0) {
+			f_pos++;
+			continue;
+		}
+	
+		switch(entry_oi->oi_ftype) {
+			case OSPFS_FTYPE_SYMLINK:
+				ftype = DT_LNK;
+				break;
+			case OSPFS_FTYPE_REG:
+				ftype = DT_REG;
+				break;
+			case OSPFS_FTYPE_DIR:
+				ftype = DT_DIR;
+				break;
+			default:
+				r = 1;
+				continue;
+				break;
+		}
 
-		/* EXERCISE: Your code here */
+		ok_so_far = filldir(dirent, od->od_name, strlen(od->od_name), f_pos, od->od_ino, ftype);
+		f_pos++;
 	}
 
 	// Save the file position and return!
