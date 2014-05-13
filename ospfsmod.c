@@ -1136,7 +1136,7 @@ ospfs_link(struct dentry *src_dentry, struct inode *dir, struct dentry *dst_dent
 	if (find_direntry(dir_oi, dst_dentry->d_name.name, dst_dentry->d_name.len)
 		return -EEXIST;
 
-	ospfs_direntry_t *od = create_blank_directory(dir_oi);
+	ospfs_direntry_t *od = create_blank_direntry(dir_oi);
 	if (IS_ERR(od))
 		return PTR_ERR(od);
 	else if (od == NULL)
