@@ -811,20 +811,26 @@ static int
 change_size(ospfs_inode_t *oi, uint32_t new_size)
 {
 	uint32_t old_size = oi->oi_size;
+	uint32_t cur_size = old_size;
 	int r = 0;
 
 	while (ospfs_size2nblocks(oi->oi_size) < ospfs_size2nblocks(new_size)) {
-	        /* EXERCISE: Your code here */
-		return -EIO; // Replace this line
+		r = add_block(oi);
+		if (r == -ENOSPC) {
+			new_size = old_size;
+			break;
+		} else if (r == -EIO) {
+			return r;
+		}
 	}
 	while (ospfs_size2nblocks(oi->oi_size) > ospfs_size2nblocks(new_size)) {
-	        /* EXERCISE: Your code here */
-		return -EIO; // Replace this line
+		if (remove_block(oi) == -EIO)		
+			return -EIO;
 	}
 
-	/* EXERCISE: Make sure you update necessary file meta data
-	             and return the proper value. */
-	return -EIO; // Replace this line
+	if (old_size > new_size) cur_size = new_size;	
+	oi->oi_size = cur_size;	
+	return r;
 }
 
 
