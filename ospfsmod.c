@@ -1103,8 +1103,30 @@ create_blank_direntry(ospfs_inode_t *dir_oi)
 
 static int
 ospfs_link(struct dentry *src_dentry, struct inode *dir, struct dentry *dst_dentry) {
-	/* EXERCISE: Your code here. */
-	return -EINVAL;
+	ospfs_inode_t *dir_oi = ospfs_inode(dir->i_ino);
+	ospfs_inode_t *src_oi = ospfs_inode(src_dentry->d_inode->i_ino);
+	
+	if (dir_oi == NULL || dir_oi->oi_nlink == -1 || dir_oi->oi_ftype != OSPFS_FTYPE_DIR)
+		return -EIO;
+
+	if (dst_dentry->d_name.len > OSPFS_MAXSYMNAMELEN)
+		return -ENAMETOOLONG;
+	
+	if (find_direntry(dir_oi, dst_dentry->d_name.name, dst_dentry->d_name.len)
+		return -EEXIST;
+
+	ospfs_direntry_t *od = create_blank_directory(dir_oi);
+	if (IS_ERR(od))
+		return PTR_ERR(od);
+	else if (od == NULL)
+		return -EIO;
+
+	od->od_ino = src_dentry->d_inode->i_ino;
+	strcpy(od->od_name, dst_dentry->d_name.name);
+	src_oi->oi_nlink++;
+	dst_oi->oi_nlink++;	
+	
+	return 0;
 }
 
 // ospfs_create
