@@ -582,7 +582,17 @@ ospfs_unlink(struct inode *dirino, struct dentry *dentry)
 static uint32_t
 allocate_block(void)
 {
-	/* EXERCISE: Your code here */
+	uint32_t nblocks = ospfs_super->os_nblocks;
+  void* free_bitmap = ospfs_block(OSPFS_FREEMAP_BLK);
+  uint32_t i;
+  for (i = OSPFS_FREEMAP_BLK; i < nblocks; i++)
+  {
+    if (bitvector_test(free_bitmap, i))
+    {
+      bitvector_clear(free_bitmap, i);
+      return i;
+    }
+  }
 	return 0;
 }
 
@@ -601,7 +611,12 @@ allocate_block(void)
 static void
 free_block(uint32_t blockno)
 {
-	/* EXERCISE: Your code here */
+	uint32_t last_block = ospfs_super->os_firstinob + OSPFS_BLKINODES;
+  void* free_bitmap = ospfs_block(OSPFS_FREEMAP_BLK);
+  if (blockno >= ospfs_super->os_ninodes || blockno <= last_block)
+    return;
+  else
+    bitvector_set(free_bitmap, blockno);
 }
 
 
