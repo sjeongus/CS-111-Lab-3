@@ -452,8 +452,12 @@ ospfs_dir_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		 * the loop.  For now we do this all the time.
 		 *
 		 * EXERCISE: Your code here */
-		r = 1;		/* Fix me! */
-		break;		/* Fix me! */
+    uint32_t file_size = dir_oi->oi_size * OSPFS_DIRENTRY_SIZE;
+    if ( (f_pos-2) >= file_size)
+    {
+		  r = 1;		/* Fix me! */
+		  break;		/* Fix me! */
+    }
 
 		/* Get a pointer to the next entry (od) in the directory.
 		 * The file system interprets the contents of a
@@ -844,7 +848,8 @@ ospfs_read(struct file *filp, char __user *buffer, size_t count, loff_t *f_pos)
 
 	// Make sure we don't read past the end of the file!
 	// Change 'count' so we never read past the end of the file.
-	/* EXERCISE: Your code here */
+	if (*f_pos + count > oi->oi_size)
+    count = oi->oi_size - *f_pos;
 
 	// Copy the data to user block by block
 	while (amount < count && retval >= 0) {
@@ -864,9 +869,18 @@ ospfs_read(struct file *filp, char __user *buffer, size_t count, loff_t *f_pos)
 		// Copy data into user space. Return -EFAULT if unable to write
 		// into user space.
 		// Use variable 'n' to track number of bytes moved.
-		/* EXERCISE: Your code here */
-		retval = -EIO; // Replace these lines
-		goto done;
+		uint32_t offset = *f_pos % OSPFS_BLKSIZE;
+    if (offset + count - amount > OSPFS_BLKSIZE)
+      n = OSPFS_BLKSIZE - offset;
+    else
+      n = count - amount;
+
+    retval = copy_to_user(buffer, data, n);
+    if (retval != 0)
+    {
+      retval = -EFAULT;
+      goto done;
+    }
 
 		buffer += n;
 		amount += n;

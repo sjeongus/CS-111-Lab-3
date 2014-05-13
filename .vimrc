@@ -1,0 +1,12 @@
+set shiftwidth=2
+set softtabstop=2
+set background=dark
+set expandtab
+set smarttab
+syntax on
+set nostartofline
+set autoindent
+set smartindent
+set copyindent
+set preserveindent
+set number
