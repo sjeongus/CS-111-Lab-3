@@ -1140,20 +1140,57 @@ static int
 ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidata *nd)
 {
 	ospfs_inode_t *dir_oi = ospfs_inode(dir->i_ino);
-	uint32_t entry_ino = 0;
-	/* EXERCISE: Your code here. */
-	return -EINVAL; // Replace this line
+	uint32_t entry_ino = 0, block_no = 0;
+	int ret = 0;	
 
-	/* Execute this code after your function has successfully created the
-	   file.  Set entry_ino to the created file's inode number before
-	   getting here. */
-	{
-		struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
-		if (!i)
-			return -ENOMEM;
-		d_instantiate(dentry, i);
-		return 0;
+	if (dentry->d_name.len > OSFPS_MAXNAMELEN)
+		return -ENAMETOOLONG;
+
+	if (find_direntry(dir_oi, dentry->d_name.name, dentry->d_name.len) != NULL)
+		return -EEXIST;	
+
+	ospfs_direntry_t *od = create_blank_direntry(dir_oi);
+
+	if (IS_ERR(od)) 
+		return PTR_ERR(od);		
+
+	uint32_t inode_no;
+	ospfs_inode_t *inode_location;
+	for (inode_no = 2; inode_no < ospfs_super->os_ninodes; inode_no++) {
+		inode_location = osfps_inode(inode_no);
+		if (inode_location->oi_nlink == 0)
+			entry_ino = inode_no;
+	}	
+
+	block_no = allocate_block(); // make sure a block is available, free later
+	if (entry_ino == 0 || block_no == 0) {
+		if (block_no != 0) free_block(block_no);
+		if (od != NULL) od->od_ino = 0;
+		return -ENOSPC;
 	}
+
+	free_block(block_no);
+	ospfs_inode_t *file_oi = ospfs_inode(entry_ino);
+	if (file_oi == NULL) {
+		if (od != NULL) od->od_ino = 0;
+		return -EIO;
+	}
+
+	file_oi->oi_size = 0;
+	file_oi->oi_ftype = OSPFS_FTYPE_REG;
+	file_oi->oi_nlink = 1;
+	file_oi->oi_mode = mode;
+	file_oi->oi_direct[0] = 0;
+	dir_oi->oi_nlink++;
+
+	od->od_ino = entry_ino;
+	strcpy(od->od_name, dentry->d_name.name);
+	
+	struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
+	if (!i)
+		return -ENOMEM;
+	d_instantiate(dentry, i);
+	return 0;
 }
 
 
