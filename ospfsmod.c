@@ -766,8 +766,56 @@ remove_block(ospfs_inode_t *oi)
 	// current number of blocks in file
 	uint32_t n = ospfs_size2nblocks(oi->oi_size);
 
-	/* EXERCISE: Your code here */
-	return -EIO; // Replace this line
+	int32_t di = direct_index(n);
+	int32_t ii = indir_index(n);
+	int32_t i2i = indir2_index(n);
+	
+	uint32_t i_block = 0;
+	uint32_t i2_block = 0;
+	uint32_t *i_data = NULL;
+	uint32_t *i2_data = NULL;
+
+	if (n == 0) return 0;
+	n--;
+
+	if (ii == -1) {
+		free_block(oi->oi_direct[di]);
+		oi->oi_direct[di] = 0;
+		oi->oi_size = OSPFS_BLKSIZE * n;
+		return 0;
+	}
+
+	if (i2i == 0) {
+		if (oi->oi_indirect2 == 0) return -EIO;
+		i2_block = oi->oi_indirect2;
+		i2_data = ospfs_block(i2_block);
+		i_block = i2_data[ii];
+		i_data = ospfs_block(i_block);
+	} else if (ii >= 0) {
+		i_block = oi->oi_indirect;
+		i_data = ospfs_block(i_block);
+	}
+
+	if (i_data == NULL) return -EIO;
+
+	free_block(i_data[di]);
+	i_data[di] = 0;
+	oi->oi_size = OSPFS_BLKSIZE * n;
+
+	if (di == 0) {
+		free_block(i_block);
+		if (i2i == -1) 
+			oi->oi_indirect = 0;
+		else
+			i2_data[ii] = 0;
+
+		if (ii == 0 && i2i == 0) {
+			free_block(i2_block);
+			oi->oi_indirect2 = 0;
+		}
+	}
+	
+	return 0;
 }
 
 
