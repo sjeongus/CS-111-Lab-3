@@ -765,8 +765,13 @@ add_block(ospfs_inode_t *oi)
   	{
     		if (oi->oi_direct[index_direct] != 0)
       			return -EIO;
-    		if ((allocated[0] = allocate_block()) == 0)
-      			goto nospace;
+        allocated[0] = allocate_block();
+    		if (allocated[0] == 0)
+        {
+          if (allocated[1] != 0)
+            free_block(allocated[1]);
+          return -ENOSPACE;
+        }
 
     		memset(ospfs_block(allocated[0]), 0, OSPFS_BLKSIZE);
     		oi->oi_direct[index_direct] = allocated[0];
@@ -841,7 +846,7 @@ add_block(ospfs_inode_t *oi)
       			di_data[index_indir] = i_block;
   	}
   	else if (oi->oi_indirect == 0)
-    		oi->oi_indirect = indir_block;
+    		oi->oi_indirect = i_block;
   	return 0;
 }
 
@@ -1059,6 +1064,7 @@ ospfs_read(struct file *filp, char __user *buffer, size_t count, loff_t *f_pos)
 		uint32_t blockno = ospfs_inode_blockno(oi, *f_pos);
 		uint32_t n;
 		char *data;
+    uint32_t offset;
 
 		// ospfs_inode_blockno returns 0 on error
 		if (blockno == 0) {
@@ -1072,7 +1078,7 @@ ospfs_read(struct file *filp, char __user *buffer, size_t count, loff_t *f_pos)
 		// Copy data into user space. Return -EFAULT if unable to write
 		// into user space.
 		// Use variable 'n' to track number of bytes moved.
-		uint32_t offset = *f_pos % OSPFS_BLKSIZE;
+		offset = *f_pos % OSPFS_BLKSIZE;
     		if (offset + count - amount > OSPFS_BLKSIZE)
     			n = OSPFS_BLKSIZE - offset;
     		else
@@ -1147,6 +1153,8 @@ ospfs_write(struct file *filp, const char __user *buffer, size_t count, loff_t *
 		uint32_t blockno = ospfs_inode_blockno(oi, *f_pos);
 		uint32_t n;
 		char *data;
+    uint32_t data_offset;
+    int ret;
 
 		if (blockno == 0) {
 			retval = -EIO;
@@ -1159,13 +1167,13 @@ ospfs_write(struct file *filp, const char __user *buffer, size_t count, loff_t *
 		// Copy data from user space. Return -EFAULT if unable to read
 		// read user space.
 		// Keep track of the number of bytes moved in 'n'.
-		uint32_t data_offset = *f_pos % OSPFS_BLKSIZE;
+		data_offset = *f_pos % OSPFS_BLKSIZE;
     		n = OSPFS_BLKSIZE - data_offset;
 
     		if (n > (count - amount))
       			n = count - amount;
     
-    		int ret = copy_from_user(data + data_offset, buffer, n);
+    		ret = copy_from_user(data + data_offset, buffer, n);
     		if (ret != 0)
       			return -EFAULT;
 
@@ -1256,8 +1264,9 @@ create_blank_direntry(ospfs_inode_t *dir_oi)
     		if (od->od_ino == 0)
       		return od;
   	}
-
-  	size = (ospfs_size2nblock(dir_oi->oi_size) + 1) * OSPFS_BLKSIZE;
+    
+    int temp = ospfs_size2nblock(dir_oi->oi_size);
+  	size = (temp + 1) * OSPFS_BLKSIZE;
   	retval = change_size(dir_oi, size);
   	if (retval != 0)
     		return ERR_PTR(retval);
@@ -1301,6 +1310,7 @@ static int
 ospfs_link(struct dentry *src_dentry, struct inode *dir, struct dentry *dst_dentry) {
 	ospfs_inode_t *dir_oi = ospfs_inode(dir->i_ino);
 	ospfs_inode_t *src_oi = ospfs_inode(src_dentry->d_inode->i_ino);
+  ospfs_direntry_t *od;
 	
 	if (dir_oi == NULL || dir_oi->oi_nlink == -1 || dir_oi->oi_ftype != OSPFS_FTYPE_DIR)
 		return -EIO;
@@ -1311,7 +1321,7 @@ ospfs_link(struct dentry *src_dentry, struct inode *dir, struct dentry *dst_dent
 	if (find_direntry(dir_oi, dst_dentry->d_name.name, dst_dentry->d_name.len))
 		return -EEXIST;
 
-	ospfs_direntry_t *od = create_blank_direntry(dir_oi);
+	od = create_blank_direntry(dir_oi);
 	if (IS_ERR(od))
 		return PTR_ERR(od);
 	else if (od == NULL)
