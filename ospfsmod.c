@@ -745,9 +745,37 @@ add_block(ospfs_inode_t *oi)
 
 	// keep track of allocations to free in case of -ENOSPC
 	uint32_t *allocated[2] = { 0, 0 };
+  
+  if (n == OSPFS_MAXFILEBLKS)
+    return -ENOSPC;
 
-	/* EXERCISE: Your code here */
-	return -EIO; // Replace this line
+  if (oi->oi_size == 0 && oi->oi_direct[0] != 0)
+    n = 1;
+
+  uint32_t index_indir2 = indir2_index(n);
+  uint32_t index_indir = indir_index(n);
+  uint32_t index_direct = direct_index(n);
+
+  if (index_indir == -1)
+  {
+    if (oi->oi_direct[index_direct] != 0)
+      return -EIO;
+    if ((allocated[0] = allocate_block()) == 0)
+      goto nospace;
+
+    memset(ospfs_block(allocated[0]), 0, OSPFS_BLKSIZE);
+    oi->oi_direct[index_direct] = allocated[0];
+    oi->oi_size = (n + 1) * OSPFS_BLKSIZE;
+    return 0;
+  }
+  
+  if (index_indir2 == 0)
+  {
+    if (oi->oi_indirect2 == 0)
+    {
+      if ((allocated[0] = allocate_ block()) == 0)
+      {
+        
 }
 
 
