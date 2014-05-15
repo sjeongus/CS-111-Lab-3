@@ -1250,7 +1250,7 @@ create_blank_direntry(ospfs_inode_t *dir_oi)
   	int retval = 0;
   
   	int i;
-  	for (i = 0; i < dir_oi->oi_size; i += OSPFS_DIRECNTRY_SIZE)
+  	for (i = 0; i < dir_oi->oi_size; i += OSPFS_DIRENTRY_SIZE)
   	{
     		od = ospfs_inode_data(dir_oi, i);
     		if (od->od_ino == 0)
