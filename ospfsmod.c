@@ -1078,14 +1078,13 @@ ospfs_read(struct file *filp, char __user *buffer, size_t count, loff_t *f_pos)
 		// Copy data into user space. Return -EFAULT if unable to write
 		// into user space.
 		// Use variable 'n' to track number of bytes moved.
-		offset = *f_pos % OSPFS_BLKSIZE;
-    		if (offset + count - amount > OSPFS_BLKSIZE)
-    			n = OSPFS_BLKSIZE - offset;
-    		else
+		    offset = *f_pos % OSPFS_BLKSIZE;
+    	  n = OSPFS_BLKSIZE - offset;
+    		if (n > (count - amount))
      			n = count - amount;
 
-    		retval = copy_to_user(buffer, data, n);
-    		if (retval != 0)
+    		retval = copy_to_user(buffer, data + offset, n);
+    		if (retval > 0)
     		{
       			retval = -EFAULT;
       			goto done;
