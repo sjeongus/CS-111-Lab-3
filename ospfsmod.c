@@ -770,7 +770,7 @@ add_block(ospfs_inode_t *oi)
         {
           if (allocated[1] != 0)
             free_block(allocated[1]);
-          return -ENOSPACE;
+          return -ENOSPC;
         }
 
     		memset(ospfs_block(allocated[0]), 0, OSPFS_BLKSIZE);
@@ -788,7 +788,7 @@ add_block(ospfs_inode_t *oi)
       			{
          			if (allocated[1] != 0)
           				free_block(allocated[1]);
-         			return -ENOSPACE;
+         			return -ENOSPC;
       			}
       			di_block = allocated[0];
       			di_data = ospfs_block(di_block);
@@ -807,7 +807,7 @@ add_block(ospfs_inode_t *oi)
       			{
         			if (allocated[0] != 0)
           				free_block(allocated[0]);
-        			return -ENOSPACE;
+        			return -ENOSPC;
       			}
       			i_block = allocated[1];
       			i_data = ospfs_block(i_block);
@@ -821,7 +821,7 @@ add_block(ospfs_inode_t *oi)
     		{
       			if (allocated[0] != 0)
         			free_block(allocated[0]);
-      			return -ENOSPACE;
+      			return -ENOSPC;
     		}
     		i_block = allocated[1];
     		i_data = ospfs_block(i_block);
@@ -834,7 +834,7 @@ add_block(ospfs_inode_t *oi)
       			free_block(allocated[0]);
     		if (allocated[1] != 0)
       			free_block(allocated[1]);
-    		return -ENOSPACE;
+    		return -ENOSPC;
   	}
   	memset(ospfs_block(i_data[index_direct]), 0, OSPFS_BLKSIZE);
   	oi->oi_size = (n + 1) * OSPFS_BLKSIZE;
@@ -1265,7 +1265,7 @@ create_blank_direntry(ospfs_inode_t *dir_oi)
       		return od;
   	}
     
-    int temp = ospfs_size2nblock(dir_oi->oi_size);
+    int temp = ospfs_size2nblocks(dir_oi->oi_size);
   	size = (temp + 1) * OSPFS_BLKSIZE;
   	retval = change_size(dir_oi, size);
   	if (retval != 0)
