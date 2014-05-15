@@ -756,6 +756,11 @@ add_block(ospfs_inode_t *oi)
   uint32_t index_indir = indir_index(n);
   uint32_t index_direct = direct_index(n);
 
+  uint32_t i_block = 0;
+  uint32_t di_block = 0;
+  uint32_t *i_data = NULL;
+  uint32_t *di_data = NULL;
+
   if (index_indir == -1)
   {
     if (oi->oi_direct[index_direct] != 0)
@@ -773,9 +778,71 @@ add_block(ospfs_inode_t *oi)
   {
     if (oi->oi_indirect2 == 0)
     {
-      if ((allocated[0] = allocate_ block()) == 0)
+      allocated[0] = allocate_block();
+      if (allocated[0] == 0)
       {
-        
+         if (allocated[1] != 0)
+          free_block(allocated[1]);
+         return -ENOSPACE;
+      }
+      di_block = allocated[0];
+      di_data = ospfs_block(di_block);
+      memset(di_data, 0, OSPFS_BLKSIZE);
+    }
+    else
+    {
+      di_block = oi->oi_indirect2;
+      di_data = ospfs_block(di_block);
+    }
+
+    if (di_data[index_indir] == 0)
+    {
+      allocated[1] = allocate_block();
+      if (allocated[1] == 0)
+      {
+        if (allocated[0] != 0)
+          free_block(allocated[0]);
+        return -ENOSPACE;
+      }
+      i_block = allocated[1];
+      i_data = ospfs_block(i_block);
+      memset(i_data, 0, OSPFS_BLKSIZE);
+    }
+  }
+  else if (oi->oi_indirect == 0)
+  {
+    allocated[1] = allocate_block();
+    if (allocated[1] == 0)
+    {
+      if (allocated[0] != 0)
+        free_block(allocated[0]);
+      return -ENOSPACE;
+    }
+    i_block = allocated[1];
+    i_data = ospfs_block(i_block);
+    memset(i_data, 0, OSPFS_BLKSIZE);
+  }
+  i_data[index_direct] = allocate_block();
+  if (i_data[index_direct] == 0)
+  {
+    if (allocated[0] != 0)
+      free_block(allocated[0]);
+    if (allocated[1] != 0)
+      free_block(allocated[1]);
+    return -ENOSPACE;
+  }
+  memset(ospfs_block(i_data[index_direct]), 0, OSPFS_BLKSIZE);
+  oi->oi_size = (n + 1) * OSPFS_BLKSIZE;
+  if (index_indir2 == 0)
+  {
+    if (oi->oi_indirect2 == 0)
+      oi->oi_indirect2 = di_block;
+    if (di_data[index_indir] == 0)
+      di_data[index_indir] = i_block;
+  }
+  else if (oi->oi_indirect == 0)
+    oi->oi_indirect = indir_block;
+  return 0;
 }
 
 
