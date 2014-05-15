@@ -583,16 +583,16 @@ static uint32_t
 allocate_block(void)
 {
 	uint32_t nblocks = ospfs_super->os_nblocks;
-  void* free_bitmap = ospfs_block(OSPFS_FREEMAP_BLK);
-  uint32_t i;
-  for (i = OSPFS_FREEMAP_BLK; i < nblocks; i++)
-  {
-    if (bitvector_test(free_bitmap, i))
-    {
-      bitvector_clear(free_bitmap, i);
-      return i;
-    }
-  }
+  	void* free_bitmap = ospfs_block(OSPFS_FREEMAP_BLK);
+  	uint32_t i;
+  	for (i = OSPFS_FREEMAP_BLK; i < nblocks; i++)
+  	{
+    		if (bitvector_test(free_bitmap, i))
+    		{
+      			bitvector_clear(free_bitmap, i);
+      			return i;
+    		}
+  	}
 	return 0;
 }
 
@@ -1019,8 +1019,8 @@ ospfs_notify_change(struct dentry *dentry, struct iattr *attr)
 	    || (retval = inode_setattr(inode, attr)) < 0)
 		goto out;
 
-    out:
-	return retval;
+	out:
+		return retval;
 }
 
 
@@ -1052,7 +1052,7 @@ ospfs_read(struct file *filp, char __user *buffer, size_t count, loff_t *f_pos)
 	// Make sure we don't read past the end of the file!
 	// Change 'count' so we never read past the end of the file.
 	if (*f_pos + count > oi->oi_size)
-    count = oi->oi_size - *f_pos;
+    		count = oi->oi_size - *f_pos;
 
 	// Copy the data to user block by block
 	while (amount < count && retval >= 0) {
@@ -1073,25 +1073,25 @@ ospfs_read(struct file *filp, char __user *buffer, size_t count, loff_t *f_pos)
 		// into user space.
 		// Use variable 'n' to track number of bytes moved.
 		uint32_t offset = *f_pos % OSPFS_BLKSIZE;
-    if (offset + count - amount > OSPFS_BLKSIZE)
-      n = OSPFS_BLKSIZE - offset;
-    else
-      n = count - amount;
+    		if (offset + count - amount > OSPFS_BLKSIZE)
+    			n = OSPFS_BLKSIZE - offset;
+    		else
+     			n = count - amount;
 
-    retval = copy_to_user(buffer, data, n);
-    if (retval != 0)
-    {
-      retval = -EFAULT;
-      goto done;
-    }
+    		retval = copy_to_user(buffer, data, n);
+    		if (retval != 0)
+    		{
+      			retval = -EFAULT;
+      			goto done;
+    		}
 
 		buffer += n;
 		amount += n;
 		*f_pos += n;
 	}
 
-    done:
-	return (retval >= 0 ? amount : retval);
+	done:
+		return (retval >= 0 ? amount : retval);
 }
 
 
@@ -1174,8 +1174,8 @@ ospfs_write(struct file *filp, const char __user *buffer, size_t count, loff_t *
 		*f_pos += n;
 	}
 
-    done:
-	return (retval >= 0 ? amount : retval);
+	done:
+		return (retval >= 0 ? amount : retval);
 }
 
 
