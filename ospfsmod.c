@@ -1347,52 +1347,47 @@ ospfs_symlink(struct inode *dir, struct dentry *dentry, const char *symname)
 	uint32_t entry_ino = 0;
 
 	ospfs_symlink_inode_t *new_inode = NULL;
-  ospfs_direntry_t *od;
+	ospfs_direntry_t *od;
 
-  if (dentry->d_name.len > OSPFS_MAXNAMELEN)
-    return -ENAMETOOLONG;
-  else if (find_direntry(dir_oi, dentry->d_name.name, dentry->d_name.len) != NULL)
-    return -EEXIST;
-  else if (strlen(symname) > OSPFS_MAXSYMLINKLEN)
-    return -ENAMETOOLONG;
+	if (dentry->d_name.len > OSPFS_MAXNAMELEN)
+    		return -ENAMETOOLONG;
+  	else if (find_direntry(dir_oi, dentry->d_name.name, dentry->d_name.len) != NULL)
+    		return -EEXIST;
+  	else if (strlen(symname) > OSPFS_MAXSYMLINKLEN)
+    		return -ENAMETOOLONG;
 
-  while (entry_ino< ospfs_super->os_ninodes)
-  {
-    new_inode = (ospfs_symlink_inode_t*) ospfs_inode(entry_ino);
-    if (new_inode->oi_nlink == 0)
-      break;
-    entry_ino++;
-  }
+  	while (entry_ino< ospfs_super->os_ninodes)
+  	{
+    		new_inode = (ospfs_symlink_inode_t*) ospfs_inode(entry_ino);
+    		if (new_inode->oi_nlink == 0)
+      			break;
+    		entry_ino++;
+  	}
 
-  if (entry_ino >= ospfs_super->os_ninodes)
-    return -ENOSPC;
+  	if (entry_ino >= ospfs_super->os_ninodes)
+    		return -ENOSPC;
 
-  od = create_blank_direntry(dir_oi);
-  if (IS_ERR(od))
-    return PTR_ERR(od);
+  	od = create_blank_direntry(dir_oi);
+  	if (IS_ERR(od))
+    		return PTR_ERR(od);
 
-  // Fill inode memer variables
-  new_inode->oi_ftype = OSPFS_FTYPE_SYMLINK;
-  new_inode->oi_nlink = 1;
-  new_inode->oi_size = strlen(symname);
-  strncpy(new_inode->oi_symlink, symname, new_inode->oi_size);
-  new_inode->oi_symlink[new_inode->oi_size] = 0;
+  	// Fill inode memer variables
+  	new_inode->oi_ftype = OSPFS_FTYPE_SYMLINK;
+  	new_inode->oi_nlink = 1;
+  	new_inode->oi_size = strlen(symname);
+  	strncpy(new_inode->oi_symlink, symname, new_inode->oi_size);
+  	new_inode->oi_symlink[new_inode->oi_size] = 0;
 
-  // Fill dir entry with inode number
-  strncpy(od->od_name, dentry->d_name.name, dentry->d_name.len);
-  od->od_name[dentry->d_name.len] = 0;
-  od->od_ino = entry_ino;
+  	// Fill dir entry with inode number
+  	strncpy(od->od_name, dentry->d_name.name, dentry->d_name.len);
+  	od->od_name[dentry->d_name.len] = 0;
+  	od->od_ino = entry_ino;
 
-	/* Execute this code after your function has successfully created the
-	   file.  Set entry_ino to the created file's inode number before
-	   getting here. */
-	{
-		struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
-		if (!i)
-			return -ENOMEM;
-		d_instantiate(dentry, i);
-		return 0;
-	}
+	struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
+	if (!i)
+		return -ENOMEM;
+	d_instantiate(dentry, i);
+	return 0;
 }
 
 
