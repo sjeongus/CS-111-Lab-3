@@ -612,11 +612,11 @@ static void
 free_block(uint32_t blockno)
 {
 	uint32_t last_block = ospfs_super->os_firstinob + OSPFS_BLKINODES;
-  void* free_bitmap = ospfs_block(OSPFS_FREEMAP_BLK);
-  if (blockno >= ospfs_super->os_ninodes || blockno <= last_block)
-    return;
-  else
-    bitvector_set(free_bitmap, blockno);
+ 	void* free_bitmap = ospfs_block(OSPFS_FREEMAP_BLK);
+  	if (blockno >= ospfs_super->os_ninodes || blockno <= last_block)
+    		return;
+  	else
+   		bitvector_set(free_bitmap, blockno);
 }
 
 
@@ -653,9 +653,9 @@ static int32_t
 indir2_index(uint32_t b)
 {
 	if (b >= OSPFS_NDIRECT + OSPFS_NINDIRECT)
-    return 0;
-  else
-    return -1;
+    		return 0;
+ 	else
+    		return -1;
 }
 
 
@@ -674,13 +674,13 @@ static int32_t
 indir_index(uint32_t b)
 {
 	if (b < OSPFS_NDIRECT)
-    return -1;
-  else if (indir2_index(b) == -1)
-    return 0;
-  else
-  {
-    b -= OSPFS_NDIRECT + OSPFS_NINDIRECT;
-    return b / OSPFS_NINDIRECT;
+    		return -1;
+ 	else if (indir2_index(b) == -1)
+    		return 0;
+  	else {
+    		b -= OSPFS_NDIRECT + OSPFS_NINDIRECT;
+    		return b / OSPFS_NINDIRECT;
+	}
 }
 
 
@@ -697,12 +697,12 @@ static int32_t
 direct_index(uint32_t b)
 {
 	if (b < OSPFS_NDIRECT)
-    return b;
-  else
-  {
-    b -= OSPFS_NDIRECT;
-    return b % OSPFS_NINDIRECT;
-  }
+    		return b;
+  	else
+  	{
+    		b -= OSPFS_NDIRECT;
+    		return b % OSPFS_NINDIRECT;
+  	}
 }
 
 
@@ -746,103 +746,103 @@ add_block(ospfs_inode_t *oi)
 	// keep track of allocations to free in case of -ENOSPC
 	uint32_t *allocated[2] = { 0, 0 };
   
-  if (n == OSPFS_MAXFILEBLKS)
-    return -ENOSPC;
+  	if (n == OSPFS_MAXFILEBLKS)
+    		return -ENOSPC;
 
-  if (oi->oi_size == 0 && oi->oi_direct[0] != 0)
-    n = 1;
+  	if (oi->oi_size == 0 && oi->oi_direct[0] != 0)
+    		n = 1;
 
-  uint32_t index_indir2 = indir2_index(n);
-  uint32_t index_indir = indir_index(n);
-  uint32_t index_direct = direct_index(n);
+  	uint32_t index_indir2 = indir2_index(n);
+ 	uint32_t index_indir = indir_index(n);
+  	uint32_t index_direct = direct_index(n);
 
-  uint32_t i_block = 0;
-  uint32_t di_block = 0;
-  uint32_t *i_data = NULL;
-  uint32_t *di_data = NULL;
+  	uint32_t i_block = 0;
+  	uint32_t di_block = 0;
+  	uint32_t *i_data = NULL;
+  	uint32_t *di_data = NULL;
 
-  if (index_indir == -1)
-  {
-    if (oi->oi_direct[index_direct] != 0)
-      return -EIO;
-    if ((allocated[0] = allocate_block()) == 0)
-      goto nospace;
+  	if (index_indir == -1)
+  	{
+    		if (oi->oi_direct[index_direct] != 0)
+      			return -EIO;
+    		if ((allocated[0] = allocate_block()) == 0)
+      			goto nospace;
 
-    memset(ospfs_block(allocated[0]), 0, OSPFS_BLKSIZE);
-    oi->oi_direct[index_direct] = allocated[0];
-    oi->oi_size = (n + 1) * OSPFS_BLKSIZE;
-    return 0;
-  }
+    		memset(ospfs_block(allocated[0]), 0, OSPFS_BLKSIZE);
+    		oi->oi_direct[index_direct] = allocated[0];
+    		oi->oi_size = (n + 1) * OSPFS_BLKSIZE;
+    		return 0;
+  	}
   
-  if (index_indir2 == 0)
-  {
-    if (oi->oi_indirect2 == 0)
-    {
-      allocated[0] = allocate_block();
-      if (allocated[0] == 0)
-      {
-         if (allocated[1] != 0)
-          free_block(allocated[1]);
-         return -ENOSPACE;
-      }
-      di_block = allocated[0];
-      di_data = ospfs_block(di_block);
-      memset(di_data, 0, OSPFS_BLKSIZE);
-    }
-    else
-    {
-      di_block = oi->oi_indirect2;
-      di_data = ospfs_block(di_block);
-    }
+  	if (index_indir2 == 0)
+  	{
+    		if (oi->oi_indirect2 == 0)
+    		{
+      			allocated[0] = allocate_block();
+      			if (allocated[0] == 0)
+      			{
+         			if (allocated[1] != 0)
+          				free_block(allocated[1]);
+         			return -ENOSPACE;
+      			}
+      			di_block = allocated[0];
+      			di_data = ospfs_block(di_block);
+      			memset(di_data, 0, OSPFS_BLKSIZE);
+    		}
+    		else
+    		{
+      			di_block = oi->oi_indirect2;
+      			di_data = ospfs_block(di_block);
+    		}
 
-    if (di_data[index_indir] == 0)
-    {
-      allocated[1] = allocate_block();
-      if (allocated[1] == 0)
-      {
-        if (allocated[0] != 0)
-          free_block(allocated[0]);
-        return -ENOSPACE;
-      }
-      i_block = allocated[1];
-      i_data = ospfs_block(i_block);
-      memset(i_data, 0, OSPFS_BLKSIZE);
-    }
-  }
-  else if (oi->oi_indirect == 0)
-  {
-    allocated[1] = allocate_block();
-    if (allocated[1] == 0)
-    {
-      if (allocated[0] != 0)
-        free_block(allocated[0]);
-      return -ENOSPACE;
-    }
-    i_block = allocated[1];
-    i_data = ospfs_block(i_block);
-    memset(i_data, 0, OSPFS_BLKSIZE);
-  }
-  i_data[index_direct] = allocate_block();
-  if (i_data[index_direct] == 0)
-  {
-    if (allocated[0] != 0)
-      free_block(allocated[0]);
-    if (allocated[1] != 0)
-      free_block(allocated[1]);
-    return -ENOSPACE;
-  }
-  memset(ospfs_block(i_data[index_direct]), 0, OSPFS_BLKSIZE);
-  oi->oi_size = (n + 1) * OSPFS_BLKSIZE;
-  if (index_indir2 == 0)
-  {
-    if (oi->oi_indirect2 == 0)
-      oi->oi_indirect2 = di_block;
-    if (di_data[index_indir] == 0)
-      di_data[index_indir] = i_block;
-  }
-  else if (oi->oi_indirect == 0)
-    oi->oi_indirect = indir_block;
-  return 0;
+    		if (di_data[index_indir] == 0)
+    		{
+      			allocated[1] = allocate_block();
+     			if (allocated[1] == 0)
+      			{
+        			if (allocated[0] != 0)
+          				free_block(allocated[0]);
+        			return -ENOSPACE;
+      			}
+      			i_block = allocated[1];
+      			i_data = ospfs_block(i_block);
+      			memset(i_data, 0, OSPFS_BLKSIZE);
+    		}
+  	}
+  	else if (oi->oi_indirect == 0)
+  	{
+    		allocated[1] = allocate_block();
+    		if (allocated[1] == 0)
+    		{
+      			if (allocated[0] != 0)
+        			free_block(allocated[0]);
+      			return -ENOSPACE;
+    		}
+    		i_block = allocated[1];
+    		i_data = ospfs_block(i_block);
+    		memset(i_data, 0, OSPFS_BLKSIZE);
+  	}
+  	i_data[index_direct] = allocate_block();
+  	if (i_data[index_direct] == 0)
+  	{
+    		if (allocated[0] != 0)
+      			free_block(allocated[0]);
+    		if (allocated[1] != 0)
+      			free_block(allocated[1]);
+    		return -ENOSPACE;
+  	}
+  	memset(ospfs_block(i_data[index_direct]), 0, OSPFS_BLKSIZE);
+  	oi->oi_size = (n + 1) * OSPFS_BLKSIZE;
+  	if (index_indir2 == 0)
+  	{
+    		if (oi->oi_indirect2 == 0)
+      			oi->oi_indirect2 = di_block;
+    		if (di_data[index_indir] == 0)
+      			di_data[index_indir] = i_block;
+  	}
+  	else if (oi->oi_indirect == 0)
+    		oi->oi_indirect = indir_block;
+  	return 0;
 }
 
 
@@ -1122,25 +1122,25 @@ ospfs_write(struct file *filp, const char __user *buffer, size_t count, loff_t *
 	// Support files opened with the O_APPEND flag.  To detect O_APPEND,
 	// use struct file's f_flags field and the O_APPEND bit.
 	if (filp->f_flags & O_APPEND)
-    *f_pos = oi->oi_size;
+	    *f_pos = oi->oi_size;
 
-  if (*f_pos + count < *f_pos)
-    return -EIO;
-  else if (*f_pos + count >= oi->oi_size)
-    retval = change_size(oi, *f_pos + count);
+  	if (*f_pos + count < *f_pos)
+    		return -EIO;
+  	else if (*f_pos + count >= oi->oi_size)
+    		retval = change_size(oi, *f_pos + count);
   
-  if (retval != 0)
-    return retval;
+  	if (retval != 0)
+    		return retval;
 
 	// If the user is writing past the end of the file, change the file's
 	// size to accomodate the request.  (Use change_size().)
-  if (*f_pos + count < *f_pos)
-    return -EIO;
-  else if (*f_pos + count >= oi->oi_size)
-   retval = change_size(oi, *f_pos + count);
+  	if (*f_pos + count < *f_pos)
+    		return -EIO;
+  	else if (*f_pos + count >= oi->oi_size)
+   		retval = change_size(oi, *f_pos + count);
 
-  if (retval != 0)
-    return retval;
+  	if (retval != 0)
+    		return retval;
 
 	// Copy data block by block
 	while (amount < count && retval >= 0) {
@@ -1160,14 +1160,14 @@ ospfs_write(struct file *filp, const char __user *buffer, size_t count, loff_t *
 		// read user space.
 		// Keep track of the number of bytes moved in 'n'.
 		uint32_t data_offset = *f_pos % OSPFS_BLKSIZE;
-    n = OSPFS_BLKSIZE - data_offset;
+    		n = OSPFS_BLKSIZE - data_offset;
 
-    if (n > (count - amount))
-      n = count - amount;
+    		if (n > (count - amount))
+      			n = count - amount;
     
-    int ret = copy_from_user(data + data_offset, buffer, n);
-    if (ret != 0)
-      return -EFAULT;
+    		int ret = copy_from_user(data + data_offset, buffer, n);
+    		if (ret != 0)
+      			return -EFAULT;
 
 		buffer += n;
 		amount += n;
@@ -1246,26 +1246,26 @@ create_blank_direntry(ospfs_inode_t *dir_oi)
 	//    entries and return one of them.
 
 	uint32_t size;
-  ospfs_direntry_t *od;
-  int retval = 0;
+  	ospfs_direntry_t *od;
+  	int retval = 0;
   
-  int i;
-  for (i = 0; i < dir_oi->oi_size; i += OSPFS_DIRECNTRY_SIZE)
-  {
-    od = ospfs_inode_data(dir_oi, i);
-    if (od->od_ino == 0)
-      return od;
-  }
+  	int i;
+  	for (i = 0; i < dir_oi->oi_size; i += OSPFS_DIRECNTRY_SIZE)
+  	{
+    		od = ospfs_inode_data(dir_oi, i);
+    		if (od->od_ino == 0)
+      		return od;
+  	}
 
-  size = (ospfs_size2nblock(dir_oi->oi_size) + 1) * OSPFS_BLKSIZE;
-  retval = change_size(dir_oi, size);
-  if (retval != 0)
-    return ERR_PTR(retval);
-  else
-  {
-    dir_oi->oi_size = size;
-    return ospfs_inode_data(dir_oi, i + OSPFS_DIRENTRY_SIZE);
-  }
+  	size = (ospfs_size2nblock(dir_oi->oi_size) + 1) * OSPFS_BLKSIZE;
+  	retval = change_size(dir_oi, size);
+  	if (retval != 0)
+    		return ERR_PTR(retval);
+  	else
+  	{
+    		dir_oi->oi_size = size;
+    		return ospfs_inode_data(dir_oi, i + OSPFS_DIRENTRY_SIZE);
+  	}
 }
 
 // ospfs_link(src_dentry, dir, dst_dentry
@@ -1360,56 +1360,54 @@ ospfs_create(struct inode *dir, struct dentry *dentry, int mode, struct nameidat
 	ospfs_inode_t *dir_oi = ospfs_inode(dir->i_ino);
 	uint32_t entry_ino = 0;
 	ospfs_direntry_t *new_dir;
-  ospfs_inode_t *new_inode;
+  	ospfs_inode_t *new_inode;
 
-  if (dentry->d_name.len > OSPFS_MAXNAMELEN)
-    return -ENAMETOOLONG;
+  	if (dentry->d_name.len > OSPFS_MAXNAMELEN)
+    		return -ENAMETOOLONG;
 
-  if (find_direntry(dir_oi, dentry->d_name.name, dentry->d_name.len) != NULL)
-    return -EEXIST;
+  	if (find_direntry(dir_oi, dentry->d_name.name, dentry->d_name.len) != NULL)
+    		return -EEXIST;
 
-  new_dir = create_blank_direntry(dir_oi);
-  if (IS_ERR(new_dir))
-    return PTR_ERR(new_dir);
+  	new_dir = create_blank_direntry(dir_oi);
+  	if (IS_ERR(new_dir))
+    		return PTR_ERR(new_dir);
   
-  // Find an empty inode
-  while (entry_ino < ospfs_super->os_ninodes)
-  {
-    new_inode = ospfs_inode(entry_ino);
-    if (new_inode && new_inode->oi_nlink == 0)
-    {
-      new_inode->oi_nlink++;
-      break;
-    }
-    entry_ino++;
-  }
+  	// Find an empty inode
+  	while (entry_ino < ospfs_super->os_ninodes)
+  	{
+    		new_inode = ospfs_inode(entry_ino);
+    		if (new_inode && new_inode->oi_nlink == 0)
+    		{
+      			new_inode->oi_nlink++;
+      			break;
+    		}
+    		entry_ino++;
+  	}
 
-  if (entry_ino == ospfs_super->os_ninodes)
-    return -ENOSPC;
+  	if (entry_ino == ospfs_super->os_ninodes)
+    		return -ENOSPC;
 
-  // Initialize inode member variables
-  new_inode->oi_size = 0;
-  new_inode->oi_ftype = OSPFS_FTYPE_REG;
-  new_inode->oi_mode = mode;
-  memset(new_inode->oi_direct, 0, sizeof(new_inode->oi_direct[0]) * OSPFS_NDIRECT);
-  new_inode->oi_indirect = 0;
-  new_inode->oi_indirect2 = 0;
+  	// Initialize inode member variables
+ 	new_inode->oi_size = 0;
+  	new_inode->oi_ftype = OSPFS_FTYPE_REG;
+  	new_inode->oi_mode = mode;
+  	memset(new_inode->oi_direct, 0, sizeof(new_inode->oi_direct[0]) * OSPFS_NDIRECT);
+  	new_inode->oi_indirect = 0;
+  	new_inode->oi_indirect2 = 0;
 
-  // Initialize directory member variables
-  new_dir->od_ino = entry_ino;
-  memcpy(new_dir->od_name, dentry->d_name.name, dentry->d_name.len);
-  new_dir->od_name[dentry->d_name.len] = 0;
+  	// Initialize directory member variables
+  	new_dir->od_ino = entry_ino;
+  	memcpy(new_dir->od_name, dentry->d_name.name, dentry->d_name.len);
+  	new_dir->od_name[dentry->d_name.len] = 0;
 
 	/* Execute this code after your function has successfully created the
 	   file.  Set entry_ino to the created file's inode number before
 	   getting here. */
-	{
-		struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
-		if (!i)
-			return -ENOMEM;
-		d_instantiate(dentry, i);
-		return 0;
-	}
+	struct inode *i = ospfs_mk_linux_inode(dir->i_sb, entry_ino);
+	if (!i)
+		return -ENOMEM;
+	d_instantiate(dentry, i);
+	return 0;
 }
 
 
